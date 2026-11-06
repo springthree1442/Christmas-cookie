@@ -1,1 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
 
+  <title>크리스마스 쿠키 공방</title>
+  <meta name="description"
+        content="직접 굽고 꾸미는 나만의 크리스마스 쿠키!">
+
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./script.js"></script>
+</head>
+
+<body>
+  <div class="game">
+
+    <header class="game-header">
+      <div class="header-title">
+        <span class="eyebrow">CHRISTMAS COOKIE ATELIER</span>
+        <h1>크리스마스 쿠키 공방</h1>
+      </div>
+
+      <button id="galleryBtn" class="header-button" type="button">
+        내 작품 보관함
+      </button>
+    </header>
+
+    <main class="game-main">
+
+      <!-- 쿠키를 굽고 꾸미는 메인 화면 -->
+      <section class="workspace">
+        <div class="canvas-container">
+          <canvas id="cookieCanvas"
+                  width="800"
+                  height="800"
+                  aria-label="쿠키 제작 화면">
+          </canvas>
+        </div>
+
+        <div id="gameMessage" class="game-message"
+             aria-live="polite">
+          어떤 쿠키를 만들까요?
+        </div>
+      </section>
+
+      <!-- 1. 쿠키 모양 선택 -->
+      <section id="shapePanel" class="control-panel">
+        <h2>쿠키 모양을 골라주세요</h2>
+
+        <div class="shape-options">
+          <button class="shape-button"
+                  data-shape="circle"
+                  type="button">
+            <span class="shape-preview circle-preview"></span>
+            <span>동그라미</span>
+          </button>
+
+          <button class="shape-button"
+                  data-shape="heart"
+                  type="button">
+            <span class="shape-preview heart-preview">♥</span>
+            <span>하트</span>
+          </button>
+        </div>
+
+        <button id="startBakeBtn"
+                class="primary-button"
+                type="button"
+                disabled>
+          쿠키 굽기
+        </button>
+      </section>
+
+      <!-- 2. 굽기 -->
+      <section id="bakePanel"
+               class="control-panel hidden">
+        <h2>쿠키를 굽고 있어요!</h2>
+
+        <div class="bake-progress">
+          <div id="bakeProgressFill"></div>
+        </div>
+
+        <button id="finishBakeBtn"
+                class="primary-button"
+                type="button">
+          쿠키 꺼내기
+        </button>
+      </section>
+
+      <!-- 3. 초코펜 꾸미기 -->
+      <section id="decoratePanel"
+               class="control-panel hidden">
+        <h2>초코펜으로 꾸며주세요</h2>
+
+        <div class="pen-options">
+          <button class="pen-button active"
+                  data-flavor="strawberry"
+                  type="button">
+            <span class="pen-color strawberry"></span>
+            딸기
+          </button>
+
+          <button class="pen-button"
+                  data-flavor="chocolate"
+                  type="button">
+            <span class="pen-color chocolate"></span>
+            초코
+          </button>
+
+          <button class="pen-button"
+                  data-flavor="vanilla"
+                  type="button">
+            <span class="pen-color vanilla"></span>
+            바닐라
+          </button>
+        </div>
+
+        <div class="tool-buttons">
+          <button id="undoBtn" type="button">
+            되돌리기
+          </button>
+          <button id="clearIcingBtn" type="button">
+            초코펜 지우기
+          </button>
+        </div>
+
+        <button id="finishDecorateBtn"
+                class="primary-button"
+                type="button">
+          완성하기
+        </button>
+      </section>
+
+      <!-- 4. 완성 및 저장 -->
+      <section id="completePanel"
+               class="control-panel hidden">
+        <h2>쿠키 완성!</h2>
+
+        <button id="saveGalleryBtn"
+                class="primary-button"
+                type="button">
+          내 작품 보관함에 저장
+        </button>
+
+        <div class="save-buttons">
+          <button id="saveTransparentBtn" type="button">
+            쿠키만 PNG 저장
+          </button>
+
+          <button id="saveSceneBtn" type="button">
+            배경 포함 PNG 저장
+          </button>
+        </div>
+
+        <button id="newCookieBtn" type="button">
+          새로운 쿠키 만들기
+        </button>
+      </section>
+
+    </main>
+
+    <!-- 내 작품 보관함 -->
+    <div id="galleryModal"
+         class="modal hidden"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="galleryTitle">
+
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="galleryTitle">내 작품 보관함</h2>
+          <button id="closeGalleryBtn"
+                  type="button"
+                  aria-label="보관함 닫기">×</button>
+        </div>
+
+        <div id="galleryGrid" class="gallery-grid"></div>
+
+        <p id="emptyGalleryMessage">
+          아직 저장한 쿠키가 없어요.
+        </p>
+      </div>
+    </div>
+
+    <footer class="game-footer">
+      Made with love & cookies ♡
+    </footer>
+
+  </div>
+</body>
+</html>
