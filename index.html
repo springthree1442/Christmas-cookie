@@ -32,12 +32,22 @@
       <!-- 쿠키를 굽고 꾸미는 메인 화면 -->
       <section class="workspace">
         <div class="canvas-container">
-          <canvas id="cookieCanvas"
-                  width="800"
-                  height="800"
-                  aria-label="쿠키 제작 화면">
-          </canvas>
-        </div>
+  <canvas id="cookieCanvas"
+          width="800"
+          height="800"
+          aria-label="쿠키 제작 화면">
+  </canvas>
+
+  <!-- 3D 초코펜을 표시할 투명 레이어 -->
+  <div id="icing3dLayer"
+       style="
+         position: absolute;
+         inset: 0;
+         pointer-events: none;
+         overflow: hidden;
+       ">
+  </div>
+</div>
 
         <div id="gameMessage" class="game-message"
              aria-live="polite">
