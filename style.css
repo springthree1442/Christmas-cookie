@@ -1,1 +1,556 @@
 
+/* CHRISTMAS COOKIE ATELIER */
+
+:root {
+  --cream: #fff8ea;
+  --paper: #fffdf7;
+  --red: #b9434c;
+  --red-dark: #8f2f39;
+  --green: #416c52;
+  --brown: #694735;
+  --gold: #d5a46b;
+  --border: #edddc5;
+
+  --strawberry: #ee91a5;
+  --chocolate: #75412f;
+  --vanilla: #fff0c7;
+
+  --shadow: 0 8px 24px rgba(88, 57, 36, .12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--cream);
+  color: var(--brown);
+  font-family:
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    sans-serif;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+button:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 전체 화면 */
+
+.game {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 상단 제목 */
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 28px;
+  background: var(--paper);
+  border-bottom: 4px solid var(--red);
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 32px);
+  color: var(--red-dark);
+}
+
+.header-button {
+  padding: 12px 17px;
+  border: 2px solid var(--green);
+  border-radius: 24px;
+  background: white;
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* 메인 화면 */
+
+.game-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 26px;
+  width: 100%;
+  max-width: 1350px;
+  margin: 0 auto;
+  padding: 28px 24px;
+}
+
+.workspace {
+  flex: 1;
+  min-width: 0;
+  max-width: 800px;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+
+  border: 7px solid #eddbc2;
+  border-radius: 28px;
+
+  background:
+    radial-gradient(
+      circle at center,
+      #fff9eb 0%,
+      #f3e3c8 75%,
+      #ebd6b5 100%
+    );
+
+  box-shadow: var(--shadow);
+}
+
+#cookieCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.game-message {
+  margin-top: 15px;
+  padding: 13px 18px;
+  border-radius: 18px;
+  background: var(--paper);
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 3px 12px rgba(75, 44, 28, .07);
+}
+
+/* 조작 패널 */
+
+.control-panel {
+  width: 320px;
+  flex-shrink: 0;
+  padding: 24px 20px;
+  border-radius: 24px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.control-panel h2 {
+  margin: 0 0 20px;
+  color: var(--red-dark);
+  font-size: 19px;
+  text-align: center;
+}
+
+/* 실제 쿠키 이미지 선택 */
+
+.shape-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.shape-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  min-height: 142px;
+  padding: 12px 7px;
+
+  background: #fff7e9;
+  color: var(--brown);
+
+  border: 3px solid transparent;
+  border-radius: 18px;
+
+  font-size: 14px;
+  font-weight: 700;
+  transition:
+    background .15s ease,
+    border-color .15s ease,
+    transform .15s ease;
+}
+
+.shape-button:hover {
+  background: #fff0d9;
+  transform: translateY(-2px);
+}
+
+.shape-button.active {
+  background: #fff0e7;
+  border-color: var(--red);
+}
+
+.shape-preview {
+  display: block;
+  width: 95px;
+  height: 95px;
+  flex-shrink: 0;
+
+  background-color: transparent;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+
+  box-shadow: none;
+}
+
+/* 동그라미 쿠키 */
+
+.circle-preview {
+  border-radius: 0;
+  background-image:
+    url("./assets/DE1BD1EE-181D-475B-83C7-D8C2913E8FC8.png");
+}
+
+/* 하트 쿠키 */
+
+.heart-preview {
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  background-image:
+    url("./assets/BFF6C4B0-4841-449E-8DC2-3C25C5A00780.png");
+}
+
+/* 주요 버튼 */
+
+.primary-button {
+  display: block;
+  width: 100%;
+  padding: 15px;
+
+  border: none;
+  border-radius: 16px;
+
+  background: var(--red);
+  color: white;
+
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 4px 0 var(--red-dark);
+}
+
+.primary-button:not(:disabled):hover {
+  background: #cc5059;
+}
+
+.primary-button:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--red-dark);
+}
+
+/* 쿠키 굽기 */
+
+.bake-progress {
+  width: 100%;
+  height: 17px;
+  margin-bottom: 25px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #e8dac6;
+}
+
+#bakeProgressFill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+
+  background: linear-gradient(
+    90deg,
+    #efd59b,
+    #cf9354,
+    #845033
+  );
+
+  transition: width .15s linear;
+}
+
+/* 초코펜 선택 */
+
+.pen-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin-bottom: 18px;
+}
+
+.pen-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  padding: 13px 5px;
+  border: 3px solid transparent;
+  border-radius: 16px;
+
+  background: #f8f0e5;
+  color: var(--brown);
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pen-button.active {
+  background: #eef4eb;
+  border-color: var(--green);
+}
+
+.pen-color {
+  display: block;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+
+  border: 2px solid rgba(80, 50, 30, .15);
+  box-shadow:
+    inset -4px -5px 0 rgba(0, 0, 0, .09),
+    inset 3px 3px 0 rgba(255, 255, 255, .25);
+}
+
+.strawberry {
+  background: var(--strawberry);
+}
+
+.chocolate {
+  background: var(--chocolate);
+}
+
+.vanilla {
+  background: var(--vanilla);
+}
+
+/* 보조 버튼 */
+
+.tool-buttons,
+.save-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tool-buttons button,
+.save-buttons button,
+#newCookieBtn {
+  flex: 1;
+  padding: 12px 8px;
+
+  border: 2px solid var(--border);
+  border-radius: 14px;
+
+  background: #fff8eb;
+  color: var(--brown);
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tool-buttons button:hover,
+.save-buttons button:hover,
+#newCookieBtn:hover {
+  background: #f4e5cd;
+}
+
+#completePanel .primary-button {
+  margin-bottom: 20px;
+}
+
+#newCookieBtn {
+  width: 100%;
+}
+
+/* 작품 보관함 */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 20px;
+  background: rgba(35, 26, 23, .65);
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 760px;
+  max-height: 85vh;
+  overflow-y: auto;
+
+  padding: 25px;
+  border-radius: 25px;
+  background: var(--paper);
+
+  box-shadow: 0 15px 50px rgba(0, 0, 0, .2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--red-dark);
+}
+
+#closeGalleryBtn {
+  width: 42px;
+  height: 42px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #f5e7d8;
+  color: var(--brown);
+
+  font-size: 26px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.gallery-grid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+
+  border-radius: 12px;
+  background: #fff2dd;
+}
+
+#emptyGalleryMessage {
+  padding: 25px 0;
+  text-align: center;
+  color: #967b69;
+}
+
+/* 하단 */
+
+.game-footer {
+  padding: 18px;
+  text-align: center;
+  color: var(--green);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* 태블릿 및 작은 화면 */
+
+@media (max-width: 900px) {
+  .game-main {
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 14px;
+  }
+
+  .workspace {
+    width: 100%;
+    max-width: 650px;
+  }
+
+  .control-panel {
+    width: 100%;
+    max-width: 650px;
+  }
+
+  .game-header {
+    padding: 15px;
+  }
+}
+
+/* 스마트폰 */
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 21px;
+  }
+
+  .eyebrow {
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  .header-button {
+    padding: 9px 11px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .canvas-container {
+    border-width: 4px;
+    border-radius: 18px;
+  }
+
+  .control-panel {
+    padding: 20px 15px;
+  }
+
+  .shape-preview {
+    width: 85px;
+    height: 85px;
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .modal-content {
+    padding: 18px;
+  }
+}
+
