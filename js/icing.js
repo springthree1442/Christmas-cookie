@@ -1,24 +1,25 @@
+
 // CHRISTMAS COOKIE ATELIER
 // js/icing.js
-// Omurice-ketchup-like icing version
+// Smooth liquid icing - version 4
 
 const FLAVORS = {
   strawberry: {
-    color: "#ee91a5",
-    shadow: "#c7657d",
-    highlight: "#ffd2dc"
+    color: "#ed93aa",
+    shadow: "rgba(159, 63, 91, 0.25)",
+    highlight: "rgba(255, 232, 239, 0.24)"
   },
 
   chocolate: {
-    color: "#75412f",
-    shadow: "#4a241a",
-    highlight: "#b88468"
+    color: "#79503c",
+    shadow: "rgba(54, 25, 17, 0.3)",
+    highlight: "rgba(239, 185, 151, 0.19)"
   },
 
   vanilla: {
-    color: "#fff0c7",
-    shadow: "#d9bf86",
-    highlight: "#fff9e9"
+    color: "#f5e6b9",
+    shadow: "rgba(159, 127, 71, 0.24)",
+    highlight: "rgba(255, 255, 247, 0.3)"
   }
 };
 
@@ -33,13 +34,24 @@ export class Icing {
     this.currentStroke = null;
 
     this.drawing = false;
+    this.pointerId = null;
 
-    this.minWidth = 10;
-    this.maxWidth = 24;
+    // 초코펜 굵기
+    this.baseWidth = 15;
+    this.minWidth = 12;
+    this.maxWidth = 19;
 
     this.lastPoint = null;
     this.lastTime = 0;
 
+    // 완성된 선을 보관하는 캔버스
+    this.savedCanvas = document.createElement("canvas");
+    this.savedCanvas.width = canvas.width;
+    this.savedCanvas.height = canvas.height;
+
+    this.savedCtx = this.savedCanvas.getContext("2d");
+
+    // 현재 초코펜 그림
     this.icingCanvas = document.createElement("canvas");
     this.icingCanvas.width = canvas.width;
     this.icingCanvas.height = canvas.height;
@@ -47,66 +59,59 @@ export class Icing {
     this.icingCtx = this.icingCanvas.getContext("2d");
   }
 
-  // 초코펜 색상 선택
-
   setFlavor(flavor) {
     if (!FLAVORS[flavor]) return false;
+
     this.flavor = flavor;
     return true;
   }
-
-  // 화면 좌표 -> 캔버스 좌표
 
   getPosition(event) {
     const rect = this.canvas.getBoundingClientRect();
 
     return {
-      x:
-        (event.clientX - rect.left) *
-        (this.canvas.width / rect.width),
+      x: (event.clientX - rect.left) *
+        this.canvas.width / rect.width,
 
-      y:
-        (event.clientY - rect.top) *
-        (this.canvas.height / rect.height)
+      y: (event.clientY - rect.top) *
+        this.canvas.height / rect.height
     };
   }
 
   // 그리기 시작
-  // 시작만 쿠키 안쪽에서 가능
-  // 이후에는 바깥으로 이어져도 허용
 
   start(event) {
-    if (!this.cookie.image) return;
-    if (this.drawing) return;
+    if (!this.cookie.image || this.drawing) return;
 
     const point = this.getPosition(event);
 
+    // 시작 위치는 쿠키 안으로 제한
     if (!this.cookie.isInsideCookie(point.x, point.y)) {
       return;
     }
 
     this.drawing = true;
+    this.pointerId = event.pointerId ?? null;
+
     this.lastTime = performance.now();
 
-    const startWidth = 17;
-
-    this.lastPoint = {
+    const firstPoint = {
       x: point.x,
-      y: point.y,
-      width: startWidth
+      y: point.y
     };
+
+    this.lastPoint = firstPoint;
 
     this.currentStroke = {
       flavor: this.flavor,
-      points: [{ ...this.lastPoint }]
+      width: this.baseWidth,
+      points: [firstPoint]
     };
 
     if (event.pointerId !== undefined) {
       try {
         this.canvas.setPointerCapture(event.pointerId);
-      } catch (error) {
-        // 일부 환경에서는 지원되지 않을 수 있음
-      }
+      } catch (error) {}
     }
 
     this.renderIcing();
@@ -117,48 +122,50 @@ export class Icing {
   move(event) {
     if (!this.drawing || !this.currentStroke) return;
 
+    if (
+      this.pointerId !== null &&
+      event.pointerId !== this.pointerId
+    ) {
+      return;
+    }
+
     const point = this.getPosition(event);
-    const now = performance.now();
 
     const dx = point.x - this.lastPoint.x;
     const dy = point.y - this.lastPoint.y;
+
     const distance = Math.hypot(dx, dy);
 
-    if (distance < 1.2) return;
+    if (distance < 1) return;
 
-    const deltaTime = Math.max(1, now - this.lastTime);
-    const speed = distance / deltaTime;
+    const now = performance.now();
+    const delta = Math.max(1, now - this.lastTime);
 
-    // 빠를수록 얇게, 느릴수록 두껍게
+    const speed = distance / delta;
+
+    // 속도 변화는 부드럽고 미세하게 반영
     const targetWidth = Math.max(
       this.minWidth,
-      Math.min(this.maxWidth, this.maxWidth - speed * 2.6)
+      Math.min(
+        this.maxWidth,
+        this.maxWidth - speed * 1.5
+      )
     );
 
-    // 급격한 굵기 변화 완화
-    const width =
-      this.lastPoint.width * 0.78 +
-      targetWidth * 0.22;
+    this.currentStroke.width =
+      this.currentStroke.width * 0.96 +
+      targetWidth * 0.04;
 
-    // 촘촘하게 보간해서 선이 끊기지 않도록 함
-    const steps = Math.max(1, Math.ceil(distance / 4));
-
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-
-      this.currentStroke.points.push({
-        x: this.lastPoint.x + dx * t,
-        y: this.lastPoint.y + dy * t,
-        width:
-          this.lastPoint.width +
-          (width - this.lastPoint.width) * t
-      });
-    }
+    // 커서 좌표 기록
+    // 곡선 렌더러가 점들을 부드럽게 연결함
+    this.currentStroke.points.push({
+      x: point.x,
+      y: point.y
+    });
 
     this.lastPoint = {
       x: point.x,
-      y: point.y,
-      width
+      y: point.y
     };
 
     this.lastTime = now;
@@ -171,94 +178,99 @@ export class Icing {
   end(event) {
     if (!this.drawing) return;
 
-    if (event && event.pointerId !== undefined) {
-      try {
-        this.canvas.releasePointerCapture(event.pointerId);
-      } catch (error) {
-        // 이미 해제되었거나 미지원
+    if (
+      event &&
+      this.pointerId !== null &&
+      event.pointerId !== undefined &&
+      event.pointerId !== this.pointerId
+    ) {
+      return;
+    }
+
+    // 마지막 포인터 위치 반영
+    if (event && event.clientX !== undefined) {
+      const point = this.getPosition(event);
+      const last = this.lastPoint;
+
+      if (last && Math.hypot(
+        point.x - last.x,
+        point.y - last.y
+      ) > 0.5) {
+        this.currentStroke.points.push(point);
       }
     }
 
-    this.drawing = false;
-
-    if (
-      this.currentStroke &&
-      this.currentStroke.points.length > 0
-    ) {
+    if (this.currentStroke) {
       this.strokes.push(this.currentStroke);
+
+      // 완성된 선은 별도 캔버스에 저장
+      this.drawStroke(
+        this.savedCtx,
+        this.currentStroke
+      );
     }
 
     this.currentStroke = null;
+    this.drawing = false;
+
+    const oldPointerId = this.pointerId;
+
+    this.pointerId = null;
     this.lastPoint = null;
+
+    if (oldPointerId !== null) {
+      try {
+        this.canvas.releasePointerCapture(
+          oldPointerId
+        );
+      } catch (error) {}
+    }
 
     this.renderIcing();
   }
 
-  // 작은 시작/끝 맺힘 표현
+  // 부드러운 곡선 경로
 
-  drawBlob(ctx, x, y, width, colors) {
-    const radius = Math.max(2, width / 2);
+  createSmoothPath(points) {
+    const path = new Path2D();
 
-    // 아래쪽 진한 면
-    ctx.beginPath();
-    ctx.arc(x + 0.8, y + 1.1, radius, 0, Math.PI * 2);
-    ctx.fillStyle = colors.shadow;
-    ctx.fill();
+    if (!points.length) return path;
 
-    // 본체
-    ctx.beginPath();
-    ctx.arc(x, y, radius * 0.95, 0, Math.PI * 2);
-    ctx.fillStyle = colors.color;
-    ctx.fill();
+    path.moveTo(points[0].x, points[0].y);
 
-    // 하이라이트
-    ctx.beginPath();
-    ctx.ellipse(
-      x - radius * 0.28,
-      y - radius * 0.28,
-      radius * 0.33,
-      radius * 0.16,
-      -0.45,
-      0,
-      Math.PI * 2
-    );
-    ctx.fillStyle = colors.highlight;
-    ctx.globalAlpha = 0.42;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-
-  // 실제 액체 라인 한 겹 그리기
-  // offsetX / offsetY 로 바닥면과 하이라이트 위치를 살짝 어긋나게 함
-
-  drawLineLayer(ctx, points, color, widthAdjust, offsetX, offsetY) {
-    if (points.length < 2) return;
-
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-
-      const width = Math.max(
-        1,
-        ((prev.width + curr.width) / 2) + widthAdjust
-      );
-
-      ctx.lineWidth = width;
-      ctx.beginPath();
-      ctx.moveTo(prev.x + offsetX, prev.y + offsetY);
-      ctx.lineTo(curr.x + offsetX, curr.y + offsetY);
-      ctx.stroke();
+    if (points.length === 1) {
+      return path;
     }
 
-    ctx.restore();
+    if (points.length === 2) {
+      path.lineTo(points[1].x, points[1].y);
+      return path;
+    }
+
+    // 중간점을 이용한 연속 곡선
+    for (let i = 1; i < points.length - 1; i++) {
+      const current = points[i];
+      const next = points[i + 1];
+
+      const midX = (current.x + next.x) / 2;
+      const midY = (current.y + next.y) / 2;
+
+      path.quadraticCurveTo(
+        current.x,
+        current.y,
+        midX,
+        midY
+      );
+    }
+
+    const last = points[points.length - 1];
+
+    path.lineTo(last.x, last.y);
+
+    return path;
   }
 
-  // 한 획 전체 그리기
+  // 초콜릿 선 그리기
 
   drawStroke(ctx, stroke) {
     const points = stroke.points;
@@ -266,72 +278,85 @@ export class Icing {
     if (!points || points.length === 0) return;
 
     const colors = FLAVORS[stroke.flavor];
+
     if (!colors) return;
 
-    // 점 하나만 찍은 경우
+    const width = stroke.width;
+
+    ctx.save();
+
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    // 한 점을 찍었을 때
     if (points.length === 1) {
-      const p = points[0];
-      this.drawBlob(ctx, p.x, p.y, p.width, colors);
+      const point = points[0];
+
+      ctx.shadowColor = colors.shadow;
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetY = 1.5;
+
+      ctx.fillStyle = colors.color;
+
+      ctx.beginPath();
+      ctx.arc(
+        point.x,
+        point.y,
+        width / 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.restore();
       return;
     }
 
-    // 1) 바닥 진한 면
-    this.drawLineLayer(
-      ctx,
-      points,
-      colors.shadow,
-      2.6,
-      0.9,
-      1.2
-    );
+    const path = this.createSmoothPath(points);
 
-    // 2) 본체
-    this.drawLineLayer(
-      ctx,
-      points,
-      colors.color,
-      0,
-      0,
-      0
-    );
+    // 1. 초콜릿의 부드러운 그림자
+    // 선명한 이중 테두리를 만들지 않음
 
-    // 3) 얇은 하이라이트
+    ctx.lineWidth = width;
+
+    ctx.strokeStyle = colors.color;
+
+    ctx.shadowColor = colors.shadow;
+    ctx.shadowBlur = 3.5;
+    ctx.shadowOffsetX = 0.5;
+    ctx.shadowOffsetY = 1.5;
+
+    ctx.stroke(path);
+
+    // 2. 그림자를 제거하고 본체 그리기
+
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    ctx.lineWidth = width;
+    ctx.strokeStyle = colors.color;
+
+    ctx.stroke(path);
+
+    // 3. 아주 연한 광택
+    // 전체 선 위에 부드럽게 얹음
+
     ctx.save();
-    ctx.globalAlpha = 0.42;
 
-    this.drawLineLayer(
-      ctx,
-      points,
-      colors.highlight,
-      -points[0].width * 0.42,
-      -1.1,
-      -1.2
-    );
+    ctx.translate(-1.1, -1.3);
+
+    ctx.lineWidth = Math.max(2, width * 0.32);
+    ctx.strokeStyle = colors.highlight;
+
+    ctx.stroke(path);
 
     ctx.restore();
-
-    // 시작과 끝부분의 맺힘
-    const first = points[0];
-    const last = points[points.length - 1];
-
-    this.drawBlob(
-      ctx,
-      first.x,
-      first.y,
-      first.width * 0.92,
-      colors
-    );
-
-    this.drawBlob(
-      ctx,
-      last.x,
-      last.y,
-      last.width * 1.03,
-      colors
-    );
+    ctx.restore();
   }
 
-  // 전체 다시 그리기
+  // 현재 화면 갱신
 
   renderIcing() {
     const ctx = this.icingCtx;
@@ -343,48 +368,64 @@ export class Icing {
       this.icingCanvas.height
     );
 
-    for (const stroke of this.strokes) {
-      this.drawStroke(ctx, stroke);
-    }
+    // 완성된 선은 복사만 함
+    ctx.drawImage(this.savedCanvas, 0, 0);
 
+    // 지금 그리고 있는 선만 새로 계산
     if (this.currentStroke) {
       this.drawStroke(ctx, this.currentStroke);
     }
   }
 
-  // 메인 캔버스에 표시
+  // 되돌리기 후 저장된 선 재구성
+
+  rebuildSavedCanvas() {
+    this.savedCtx.clearRect(
+      0,
+      0,
+      this.savedCanvas.width,
+      this.savedCanvas.height
+    );
+
+    for (const stroke of this.strokes) {
+      this.drawStroke(this.savedCtx, stroke);
+    }
+
+    this.renderIcing();
+  }
 
   draw(ctx) {
     ctx.drawImage(this.icingCanvas, 0, 0);
   }
 
-  // 마지막 획 되돌리기
-
   undo() {
-    if (this.strokes.length === 0) return;
+    if (!this.strokes.length) return;
 
     this.strokes.pop();
-    this.renderIcing();
+    this.rebuildSavedCanvas();
   }
-
-  // 전체 지우기
 
   clear() {
     this.strokes = [];
     this.currentStroke = null;
+
     this.drawing = false;
+    this.pointerId = null;
     this.lastPoint = null;
+
+    this.savedCtx.clearRect(
+      0,
+      0,
+      this.savedCanvas.width,
+      this.savedCanvas.height
+    );
 
     this.renderIcing();
   }
 
-  // 저장용 캔버스 반환
-
   getCanvas() {
     return this.icingCanvas;
   }
-
-  // 새 쿠키 제작 시 초기화
 
   reset() {
     this.flavor = "strawberry";
