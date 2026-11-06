@@ -3,7 +3,7 @@
 // script.js
 
 import { Cookie } from "./js/cookie.js";
-import { Icing } from "./js/icing.js";
+import { Icing } from "./js/icing.js?v=smooth2";
 import { Storage } from "./js/storage.js";
 
 // HTML 요소 가져오기
