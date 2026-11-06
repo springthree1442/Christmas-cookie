@@ -185,10 +185,14 @@ shapeButtons.forEach((button) => {
       );
     });
 
-    cookie.selectShape(shape);
-    icing.reset();
+const selected = cookie.selectShape(shape);
 
-    startBakeBtn.disabled = false;
+if (!selected) {
+  setMessage("쿠키 선택에 실패했어요.");
+  return;
+}
+
+startBakeBtn.disabled = false;
 
     setMessage(
       shape === "circle"
