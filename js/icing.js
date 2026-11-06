@@ -1,97 +1,37 @@
-
-// CHRISTMAS COOKIE ATELIER
-// js/icing.js
-// Three.js 3D Chocolate Pen - v1
-
-import * as THREE from "three";
+// Christmas Cookie Atelier — smooth icing (Canvas 2D)
+// This replaces the experimental Three.js mesh pen.
 
 const FLAVORS = {
-  strawberry: 0xee91a5,
-  chocolate: 0x75412f,
-  vanilla: 0xffedc4
+  strawberry: { body: '#e994a9', shade: 'rgba(126, 45, 67, 0.20)', light: 'rgba(255, 255, 255, 0.16)' },
+  chocolate:  { body: '#804b37', shade: 'rgba(48, 20, 13, 0.23)', light: 'rgba(255, 232, 208, 0.12)' },
+  vanilla:    { body: '#f6e8c0', shade: 'rgba(123, 92, 44, 0.18)', light: 'rgba(255, 255, 255, 0.20)' }
 };
 
 export class Icing {
   constructor(canvas, cookie) {
     this.canvas = canvas;
     this.cookie = cookie;
-
-    this.flavor = "strawberry";
-
+    this.flavor = 'strawberry';
+    this.width = 13;
     this.strokes = [];
     this.currentStroke = null;
     this.drawing = false;
     this.pointerId = null;
 
-    this.width = 17;
-    this.lastPoint = null;
+    const makeCanvas = () => {
+      const c = document.createElement('canvas');
+      c.width = canvas.width;
+      c.height = canvas.height;
+      return c;
+    };
+    this.savedCanvas = makeCanvas();
+    this.savedCtx = this.savedCanvas.getContext('2d');
+    this.icingCanvas = makeCanvas();
+    this.icingCtx = this.icingCanvas.getContext('2d');
 
-    this.w = canvas.width;
-    this.h = canvas.height;
-
-    // 3D 레이어 준비
-    this.layer = document.getElementById("icing3dLayer");
-
-    this.scene = new THREE.Scene();
-
-    // 화면과 좌표가 일치하는 직교 카메라
-    this.camera = new THREE.OrthographicCamera(
-      0, this.w,
-      0, this.h,
-      0.1, 2000
-    );
-
-    this.camera.position.set(0, 0, 1000);
-    this.camera.lookAt(0, 0, 0);
-
-    // 투명한 WebGL 캔버스
-    this.renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      antialias: true,
-      preserveDrawingBuffer: true,
-      powerPreference: "default"
-    });
-
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(this.w, this.h, false);
-    this.renderer.setClearColor(0x000000, 0);
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-    const element = this.renderer.domElement;
-
-    element.style.width = "100%";
-    element.style.height = "100%";
-    element.style.display = "block";
-    element.style.pointerEvents = "none";
-
-    this.layer.appendChild(element);
-
-    // 조명
-    const ambient = new THREE.AmbientLight(
-      0xffffff, 1.45
-    );
-    this.scene.add(ambient);
-
-    const mainLight = new THREE.DirectionalLight(
-      0xffffff, 2.0
-    );
-    mainLight.position.set(-300, -400, 700);
-    this.scene.add(mainLight);
-
-    const softLight = new THREE.DirectionalLight(
-      0xffe3ca, 0.45
-    );
-    softLight.position.set(350, 250, 500);
-    this.scene.add(softLight);
-
-    // 쿠키 위 초콜릿을 담는 그룹
-    this.chocolateGroup = new THREE.Group();
-    this.scene.add(this.chocolateGroup);
-
-    // 기존 저장 코드와 호환되는 속성
-    this.icingCanvas = element;
-
-    this.renderIcing();
+    // Hide/remove any canvas left from the previous Three.js version.
+    const oldLayer = document.getElementById('icing3dLayer');
+    if (oldLayer) oldLayer.replaceChildren();
   }
 
   setFlavor(flavor) {
@@ -100,342 +40,160 @@ export class Icing {
     return true;
   }
 
-  // 화면 좌표를 800x800 좌표로 변환
   getPosition(event) {
-    const rect = this.canvas.getBoundingClientRect();
-
+    const r = this.canvas.getBoundingClientRect();
     return {
-      x: (event.clientX - rect.left) *
-        this.w / rect.width,
-      y: (event.clientY - rect.top) *
-        this.h / rect.height
+      x: (event.clientX - r.left) * this.canvas.width / r.width,
+      y: (event.clientY - r.top) * this.canvas.height / r.height
     };
   }
 
-  // 초콜릿 재질
-  createMaterial(flavor) {
-    return new THREE.MeshPhysicalMaterial({
-      color: FLAVORS[flavor],
-      roughness: 0.36,
-      metalness: 0.0,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.3
-    });
-  }
-
-  // 하나의 연속된 입체 튜브 생성
-  createStrokeMesh(stroke) {
-    const points = stroke.points;
-
-    if (!points.length) return null;
-
-    const material = this.createMaterial(
-      stroke.flavor
-    );
-
-    const group = new THREE.Group();
-
-    const radius = stroke.width / 2;
-
-    // 한 번 터치한 경우
-    if (points.length === 1) {
-      const p = points[0];
-
-      const geometry = new THREE.SphereGeometry(
-        radius, 16, 12
-      );
-
-      const mesh = new THREE.Mesh(
-        geometry, material
-      );
-
-      mesh.position.set(p.x, p.y, 8);
-      group.add(mesh);
-
-      return group;
-    }
-
-    // 곡선의 경유점
-    const vectors = points.map(p =>
-      new THREE.Vector3(p.x, p.y, 8)
-    );
-
-    // 손가락 움직임을 부드럽게 보간
-    const curve = new THREE.CatmullRomCurve3(
-      vectors,
-      false,
-      "centripetal",
-      0.5
-    );
-
-    const segments = Math.min(
-      500,
-      Math.max(12, points.length * 3)
-    );
-
-    // 실제 원형 단면을 가진 표면 생성
-    const geometry = new THREE.TubeGeometry(
-      curve,
-      segments,
-      radius,
-      12,
-      false
-    );
-
-    const tube = new THREE.Mesh(
-      geometry, material
-    );
-
-    group.add(tube);
-
-    // 양 끝의 열린 단면을 둥글게 막기
-    // 튜브와 동일한 3D 재질 사용
-    const capGeometry = new THREE.SphereGeometry(
-      radius, 16, 12
-    );
-
-    const first = vectors[0];
-    const last = vectors[vectors.length - 1];
-
-    for (const p of [first, last]) {
-      const cap = new THREE.Mesh(
-        capGeometry, material
-      );
-      cap.position.copy(p);
-      group.add(cap);
-    }
-
-    return group;
-  }
-
-  // 사용이 끝난 메시 메모리 정리
-  disposeObject(object) {
-    if (!object) return;
-
-    const materials = new Set();
-
-    object.traverse(child => {
-      if (!child.isMesh) return;
-
-      child.geometry.dispose();
-
-      if (Array.isArray(child.material)) {
-        child.material.forEach(m => materials.add(m));
-      } else {
-        materials.add(child.material);
-      }
-    });
-
-    materials.forEach(material => material.dispose());
-  }
-
-  // 그리기 시작
   start(event) {
-    if (!this.cookie.image || this.drawing) return;
-
+    if (this.drawing || !this.cookie.image) return;
     const p = this.getPosition(event);
-
-    // 시작은 쿠키 안쪽에서만
-    if (!this.cookie.isInsideCookie(p.x, p.y)) {
-      return;
-    }
+    // Start on the cookie, but allow strokes to continue beyond its edge.
+    if (!this.cookie.isInsideCookie(p.x, p.y)) return;
 
     this.drawing = true;
     this.pointerId = event.pointerId ?? null;
-    this.lastPoint = p;
-
     this.currentStroke = {
       flavor: this.flavor,
       width: this.width,
-      points: [p],
-      object: null
+      points: [p]
     };
-
     try {
-      if (event.pointerId !== undefined) {
-        this.canvas.setPointerCapture(event.pointerId);
-      }
-    } catch (e) {}
-
-    this.updateCurrentMesh();
+      if (this.pointerId !== null) this.canvas.setPointerCapture(this.pointerId);
+    } catch (_) {}
+    this.renderIcing();
   }
 
-  // 그리기 진행
   move(event) {
     if (!this.drawing || !this.currentStroke) return;
-
-    if (
-      this.pointerId !== null &&
-      event.pointerId !== this.pointerId
-    ) return;
-
+    if (this.pointerId !== null && event.pointerId !== this.pointerId) return;
     const p = this.getPosition(event);
-    const last = this.lastPoint;
+    const pts = this.currentStroke.points;
+    const last = pts[pts.length - 1];
+    if (Math.hypot(p.x - last.x, p.y - last.y) < 1.4) return;
 
-    if (!last) return;
-
-    const dx = p.x - last.x;
-    const dy = p.y - last.y;
-    const distance = Math.hypot(dx, dy);
-
-    if (distance < 2) return;
-
-    // 경로가 너무 촘촘해지지 않도록 제한
-    const steps = Math.max(
-      1,
-      Math.ceil(distance / 7)
-    );
-
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-
-      this.currentStroke.points.push({
-        x: last.x + dx * t,
-        y: last.y + dy * t
-      });
-    }
-
-    this.lastPoint = p;
-
-    this.updateCurrentMesh();
-  }
-
-  // 현재 그리고 있는 3D 선만 갱신
-  updateCurrentMesh() {
-    if (!this.currentStroke) return;
-
-    const oldObject = this.currentStroke.object;
-
-    if (oldObject) {
-      this.chocolateGroup.remove(oldObject);
-      this.disposeObject(oldObject);
-    }
-
-    const newObject = this.createStrokeMesh(
-      this.currentStroke
-    );
-
-    this.currentStroke.object = newObject;
-
-    if (newObject) {
-      this.chocolateGroup.add(newObject);
-    }
-
+    // Gentle stabilization: remove tiny pointer jitter without geometric joins.
+    const previous = pts.length > 1 ? pts[pts.length - 2] : last;
+    const smoothed = {
+      x: 0.88 * p.x + 0.12 * last.x,
+      y: 0.88 * p.y + 0.12 * last.y
+    };
+    if (Math.hypot(smoothed.x - previous.x, smoothed.y - previous.y) < 0.6) return;
+    pts.push(smoothed);
     this.renderIcing();
   }
 
-  // 그리기 종료
   end(event) {
     if (!this.drawing) return;
-
-    if (
-      event &&
-      this.pointerId !== null &&
-      event.pointerId !== undefined &&
-      event.pointerId !== this.pointerId
-    ) return;
-
-    if (this.currentStroke) {
-      this.strokes.push(this.currentStroke);
-    }
-
-    this.currentStroke = null;
+    if (event && this.pointerId !== null && event.pointerId !== undefined && event.pointerId !== this.pointerId) return;
+    const stroke = this.currentStroke;
     this.drawing = false;
-
-    const oldId = this.pointerId;
-
+    this.currentStroke = null;
+    if (stroke) {
+      this.strokes.push(stroke);
+      this.drawStroke(this.savedCtx, stroke);
+    }
+    const id = this.pointerId;
     this.pointerId = null;
-    this.lastPoint = null;
-
-    if (oldId !== null) {
-      try {
-        this.canvas.releasePointerCapture(oldId);
-      } catch (e) {}
+    if (id !== null) {
+      try { this.canvas.releasePointerCapture(id); } catch (_) {}
     }
-
     this.renderIcing();
   }
 
-  // WebGL 화면 갱신
+  pathFor(points) {
+    const p = new Path2D();
+    if (!points.length) return p;
+    p.moveTo(points[0].x, points[0].y);
+    if (points.length === 2) {
+      p.lineTo(points[1].x, points[1].y);
+    } else if (points.length > 2) {
+      for (let i = 1; i < points.length - 1; i++) {
+        const a = points[i], b = points[i + 1];
+        p.quadraticCurveTo(a.x, a.y, (a.x + b.x) / 2, (a.y + b.y) / 2);
+      }
+      const last = points[points.length - 1];
+      p.lineTo(last.x, last.y);
+    }
+    return p;
+  }
+
+  drawStroke(ctx, stroke) {
+    const pts = stroke.points;
+    if (!pts?.length) return;
+    const col = FLAVORS[stroke.flavor];
+    if (!col) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const w = stroke.width;
+    if (pts.length === 1) {
+      ctx.shadowColor = col.shade;
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetY = 1.2;
+      ctx.fillStyle = col.body;
+      ctx.beginPath();
+      ctx.arc(pts[0].x, pts[0].y, w / 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      const path = this.pathFor(pts);
+      ctx.strokeStyle = col.body;
+      ctx.lineWidth = w;
+      ctx.shadowColor = col.shade;
+      ctx.shadowBlur = 2.5;
+      ctx.shadowOffsetY = 1.3;
+      ctx.stroke(path);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+
+      // Faint continuous reflected light, not separate rings or end caps.
+      ctx.translate(-1.1, -1.2);
+      ctx.strokeStyle = col.light;
+      ctx.lineWidth = Math.max(2, w * 0.23);
+      ctx.stroke(path);
+    }
+    ctx.restore();
+  }
+
   renderIcing() {
-    this.renderer.render(
-      this.scene,
-      this.camera
-    );
+    const ctx = this.icingCtx;
+    ctx.clearRect(0, 0, this.icingCanvas.width, this.icingCanvas.height);
+    ctx.drawImage(this.savedCanvas, 0, 0);
+    if (this.currentStroke) this.drawStroke(ctx, this.currentStroke);
   }
 
-  // 기존 script.js의 draw()와 호환
   draw(ctx) {
-    // 메인 화면에서는 투명한 3D 레이어가
-    // 초콜릿을 별도로 표시하므로 중복 출력하지 않음
-    if (ctx.canvas === this.canvas) {
-      return;
-    }
-
-    // PNG 저장용 캔버스에는 3D 결과 합성
-    this.renderIcing();
-
-    ctx.drawImage(
-      this.renderer.domElement,
-      0, 0,
-      this.w, this.h
-    );
+    ctx.drawImage(this.icingCanvas, 0, 0);
   }
 
-  // 마지막 획 되돌리기
+  rebuild() {
+    this.savedCtx.clearRect(0, 0, this.savedCanvas.width, this.savedCanvas.height);
+    for (const stroke of this.strokes) this.drawStroke(this.savedCtx, stroke);
+    this.renderIcing();
+  }
+
   undo() {
     if (!this.strokes.length) return;
-
-    const stroke = this.strokes.pop();
-
-    if (stroke.object) {
-      this.chocolateGroup.remove(stroke.object);
-      this.disposeObject(stroke.object);
-    }
-
-    this.renderIcing();
+    this.strokes.pop();
+    this.rebuild();
   }
 
-  // 모든 초코펜 그림 삭제
   clear() {
-    for (const stroke of this.strokes) {
-      if (stroke.object) {
-        this.chocolateGroup.remove(stroke.object);
-        this.disposeObject(stroke.object);
-      }
-    }
-
-    if (
-      this.currentStroke &&
-      this.currentStroke.object
-    ) {
-      this.chocolateGroup.remove(
-        this.currentStroke.object
-      );
-
-      this.disposeObject(
-        this.currentStroke.object
-      );
-    }
-
     this.strokes = [];
     this.currentStroke = null;
     this.drawing = false;
     this.pointerId = null;
-    this.lastPoint = null;
-
+    this.savedCtx.clearRect(0, 0, this.savedCanvas.width, this.savedCanvas.height);
     this.renderIcing();
   }
 
-  // 저장용 캔버스
-  getCanvas() {
-    this.renderIcing();
-    return this.renderer.domElement;
-  }
-
-  // 새 쿠키 제작
+  getCanvas() { return this.icingCanvas; }
   reset() {
     this.clear();
-    this.flavor = "strawberry";
+    this.flavor = 'strawberry';
   }
 }
